@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, FormEvent } from "react";
 
-export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function LoginPage(): JSX.Element {
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -28,19 +28,24 @@ export default function LoginPage() {
         return;
       }
 
-      // Simpan user info ke localStorage/sessionStorage (atau state management)
-      localStorage.setItem("user", JSON.stringify({
-        id: data.id,
-        username: data.name,
-        email: data.email,
-        role: data.role,
-        plan: data.plan || "free",
-      }));
+      // Simpan user info ke localStorage
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data.id,
+          username: data.name,
+          email: data.email,
+          role: data.role,
+          plan: data.plan || "free",
+        })
+      );
 
       // Redirect ke dashboard
       window.location.href = "/dashboard";
     } catch (err) {
+      console.error("Login error:", err);
       setError("Terjadi kesalahan jaringan");
+    } finally {
       setLoading(false);
     }
   };
@@ -51,10 +56,12 @@ export default function LoginPage() {
         <h1 className="text-center text-xl font-semibold mb-6 tracking-wide">
           PRESSOC
         </h1>
+
         <form onSubmit={handleLogin}>
           {error && (
             <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
           )}
+
           <div className="mb-4">
             <label className="block text-sm mb-1">Username</label>
             <input
@@ -67,6 +74,7 @@ export default function LoginPage() {
               autoComplete="username"
             />
           </div>
+
           <div className="mb-6">
             <label className="block text-sm mb-1">Password</label>
             <input
@@ -79,6 +87,7 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
           <button
             type="submit"
             disabled={loading}

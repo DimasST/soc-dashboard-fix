@@ -283,19 +283,14 @@ app.patch("/api/devices/:id", async (req, res) => {
   }
 });
 
-
-
-app.delete("/api/devices/:prtgId", async (req, res) => {
-  const { prtgId } = req.params;
-
+app.delete("/api/devices/byid/:id/user/:userId", async (req, res) => {
+  const { id, userId } = req.params;
   try {
-    // cari device di DB
-    const device = await prisma.device.findFirst({ where: { prtgId } });
-    if (!device) {
-      return res.status(404).json({ error: "Device tidak ditemukan di DB" });
+    const device = await prisma.device.findUnique({ where: { id } });
+    if (!device || device.userId !== userId) {
+      return res.status(404).json({ error: "Device tidak ditemukan atau tidak sesuai user" });
     }
 
-    // coba hapus di PRTG
     const delUrl = `${PRTG_HOST}/api/deleteobject.htm`;
     const delParams = {
       id: device.prtgId,
@@ -311,21 +306,17 @@ app.delete("/api/devices/:prtgId", async (req, res) => {
       if (xmlError?.includes("There is no object with the specified ID")) {
         console.warn(`⚠️ Device #${device.prtgId} tidak ada di PRTG, lanjut hapus DB saja.`);
       } else {
-        throw err; // kalau error lain, lempar
+        throw err;
       }
     }
 
-    // hapus di DB (cascade akan beresin sensor + logs)
-    await prisma.device.delete({ where: { id: device.id } });
-
-    return res.json({ success: true, message: "✅ Device deleted from DB (and PRTG if existed)" });
+    await prisma.device.delete({ where: { id } });
+    return res.json({ success: true });
   } catch (error) {
     console.error("❌ Error deleting device:", error.message);
     return res.status(500).json({ error: "Failed to delete device: " + error.message });
   }
 });
-
-
 
 
 // Get groups

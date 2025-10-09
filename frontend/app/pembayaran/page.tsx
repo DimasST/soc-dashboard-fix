@@ -35,7 +35,8 @@ export default function PembayaranBaru() {
   const isEmailValid = (v: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-  const pollingRef = useRef<NodeJS.Timer | null>(null);
+  // ✅ fix type agar kompatibel di browser & Node.js
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -65,7 +66,8 @@ export default function PembayaranBaru() {
     }, 3000); // cek tiap 3 detik
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  // ✅ simpan data ke backend
+  const handleSaveProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isEmailValid(email)) {
       alert("Format email admin tidak valid.");
@@ -87,6 +89,7 @@ export default function PembayaranBaru() {
           email,
         }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan profil");
 
@@ -101,6 +104,7 @@ export default function PembayaranBaru() {
           price,
         }),
       });
+
       const order = await resOrder.json();
       if (!resOrder.ok) throw new Error(order.error || "Gagal membuat order");
 
@@ -110,14 +114,16 @@ export default function PembayaranBaru() {
 
       // 🚀 mulai polling status pembayaran
       startPollingStatus(order.orderId);
-    } catch (err: unknown) {
-      if (err instanceof Error) alert(err.message);
-      else alert("Terjadi kesalahan tak terduga");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Terjadi kesalahan tak terduga";
+      alert(message);
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ generate invoice PDF
   const downloadPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
@@ -151,18 +157,22 @@ export default function PembayaranBaru() {
               <div key={s.n} className="flex items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                  ${
-                    step > (s.n as Step)
-                      ? "bg-green-600"
-                      : isActive
-                      ? "bg-blue-600"
-                      : "bg-[#132132]"
-                  }`}
+                    ${
+                      step > (s.n as Step)
+                        ? "bg-green-600"
+                        : isActive
+                        ? "bg-blue-600"
+                        : "bg-[#132132]"
+                    }`}
                   title={s.label}
                 >
                   {step > (s.n as Step) ? "✓" : s.n}
                 </div>
-                <span className={`ml-2 mr-4 text-sm ${isActive ? "text-white font-medium" : "text-gray-300"}`}>
+                <span
+                  className={`ml-2 mr-4 text-sm ${
+                    isActive ? "text-white font-medium" : "text-gray-300"
+                  }`}
+                >
                   {s.label}
                 </span>
                 {i !== 2 && <div className="w-8 h-[2px] bg-[#334155]" />}
@@ -173,33 +183,68 @@ export default function PembayaranBaru() {
 
         {/* STEP 1 */}
         {step === 1 && (
-          <form onSubmit={handleSaveProfile} className="space-y-4 bg-[#0C1A2A] p-5 rounded-xl border border-[#1C2C3A] shadow">
+          <form
+            onSubmit={handleSaveProfile}
+            className="space-y-4 bg-[#0C1A2A] p-5 rounded-xl border border-[#1C2C3A] shadow"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm mb-1">Company Name</label>
-                <input className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
+                <input
+                  className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm mb-1">Full Name</label>
-                <input className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                <input
+                  className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm mb-1">City</label>
-                <input className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none" value={city} onChange={(e) => setCity(e.target.value)} required />
+                <input
+                  className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm mb-1">Country</label>
-                <input className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none" value={country} onChange={(e) => setCountry(e.target.value)} required />
+                <input
+                  className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  required
+                />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm mb-1">Email Admin</label>
-                <input type="email" className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input
+                  type="email"
+                  className="p-3 rounded w-full bg-[#091320] border border-gray-700 outline-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
                 {!email || isEmailValid(email) ? null : (
-                  <p className="text-xs text-red-400 mt-1">Format email tidak valid.</p>
+                  <p className="text-xs text-red-400 mt-1">
+                    Format email tidak valid.
+                  </p>
                 )}
               </div>
             </div>
-            <button type="submit" disabled={loading || !email || !isEmailValid(email)} className="w-full px-5 py-3 bg-blue-600 rounded hover:bg-blue-500 font-medium disabled:opacity-60">
+            <button
+              type="submit"
+              disabled={loading || !email || !isEmailValid(email)}
+              className="w-full px-5 py-3 bg-blue-600 rounded hover:bg-blue-500 font-medium disabled:opacity-60"
+            >
               {loading ? "Menyimpan..." : "Lanjut ke Pembayaran →"}
             </button>
           </form>
@@ -210,44 +255,62 @@ export default function PembayaranBaru() {
           <div className="bg-[#0C1A2A] p-5 rounded-xl border border-[#1C2C3A] shadow text-center">
             <h3 className="font-semibold mb-4">Scan QRIS untuk membayar</h3>
             {qrisUrl ? (
-              <img src={qrisUrl} alt="QRIS" className="mx-auto border p-2 w-64 h-64 object-contain" />
+              <img
+                src={qrisUrl}
+                alt="QRIS"
+                className="mx-auto border p-2 w-64 h-64 object-contain"
+              />
             ) : (
               <p className="text-gray-400">Menyiapkan QRIS...</p>
             )}
             <p className="mt-3 text-sm text-gray-400">Order ID: {orderId}</p>
-            <p className="mt-2 text-xs text-gray-400">Sistem akan otomatis mendeteksi pembayaran dan lanjut ke langkah berikutnya.</p>
+            <p className="mt-2 text-xs text-gray-400">
+              Sistem akan otomatis mendeteksi pembayaran dan lanjut ke langkah
+              berikutnya.
+            </p>
           </div>
         )}
 
         {/* STEP 3 */}
-{step === 3 && (
-  <div className="bg-[#0C1A2A] p-6 rounded-xl border border-[#1C2C3A] shadow text-center space-y-6">
-    <h3 className="font-semibold text-xl mb-4">🎉 Pembayaran Berhasil</h3>
+        {step === 3 && (
+          <div className="bg-[#0C1A2A] p-6 rounded-xl border border-[#1C2C3A] shadow text-center space-y-6">
+            <h3 className="font-semibold text-xl mb-4">
+              🎉 Pembayaran Berhasil
+            </h3>
 
-    <div className="flex items-center justify-center gap-3">
-      <button
-        onClick={() => router.push("/activate")}
-        className="px-5 py-3 bg-blue-600 hover:bg-blue-500 rounded font-medium"
-      >
-        Lanjut ke Aktivasi
-      </button>
-      <button
-        onClick={() => router.push("/")}
-        className="px-5 py-3 bg-transparent border border-gray-600 rounded font-medium hover:bg-[#0F2135]"
-      >
-        Kembali ke Beranda
-      </button>
-    </div>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => router.push("/activate")}
+                className="px-5 py-3 bg-blue-600 hover:bg-blue-500 rounded font-medium"
+              >
+                Lanjut ke Aktivasi
+              </button>
+              <button
+                onClick={() => router.push("/")}
+                className="px-5 py-3 bg-transparent border border-gray-600 rounded font-medium hover:bg-[#0F2135]"
+              >
+                Kembali ke Beranda
+              </button>
+              <button
+                onClick={downloadPDF}
+                className="px-5 py-3 bg-green-600 hover:bg-green-500 rounded font-medium"
+              >
+                Unduh Invoice PDF
+              </button>
+            </div>
 
-    {activationToken && (
-      <div className="mt-6 bg-[#132132] p-4 rounded">
-        <h4 className="font-semibold text-sm mb-2">🔑 Token Aktivasi Anda</h4>
-        <p className="break-all text-green-400 font-mono">{activationToken}</p>
-      </div>
-    )}
-  </div>
-)}
-
+            {activationToken && (
+              <div className="mt-6 bg-[#132132] p-4 rounded">
+                <h4 className="font-semibold text-sm mb-2">
+                  🔑 Token Aktivasi Anda
+                </h4>
+                <p className="break-all text-green-400 font-mono">
+                  {activationToken}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -12,49 +12,68 @@ import {
   CartesianGrid,
 } from 'recharts';
 
-type Sensor = {
+// =====================
+// TYPES
+// =====================
+
+interface SensorLog {
+  createdAt: string;
+  value: number;
+}
+
+interface Sensor {
   id: string;
   name: string;
   deviceName: string;
   lastValue: number | null;
-  status: number; // 0=Up,1=Warning,2=Down
-  lastLog: {
-    createdAt: string;
-    value: number;
-  } | null;
-};
+  status: 0 | 1 | 2;
+  lastLog: SensorLog | null;
+}
 
-type SensorLog = {
-  createdAt: string;
-  value: number;
-};
+interface Stats {
+  up: number;
+  warning: number;
+  down: number;
+}
+
+interface StatusInfo {
+  label: string;
+  color: string;
+}
+
+// =====================
+// COMPONENT
+// =====================
 
 export default function SensorPage() {
   const [sensors, setSensors] = useState<Sensor[]>([]);
-  const [stats, setStats] = useState({ up: 0, warning: 0, down: 0 });
+  const [stats, setStats] = useState<Stats>({ up: 0, warning: 0, down: 0 });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedSensorLogs, setSelectedSensorLogs] = useState<SensorLog[]>([]);
   const [selectedSensorName, setSelectedSensorName] = useState<string | null>(null);
 
-  // Mapping status angka ke label dan warna
-  const statusMap = {
+  // Map status ke label & warna
+  const statusMap: Record<Sensor['status'], StatusInfo> = {
     0: { label: 'Up', color: 'bg-green-500' },
     1: { label: 'Warning', color: 'bg-yellow-500' },
     2: { label: 'Down', color: 'bg-red-500' },
   };
 
+  // =====================
+  // FETCH SENSOR STATUS
+  // =====================
   useEffect(() => {
-    async function fetchSensors(userId: string) {
+    const fetchSensors = async (userId: string): Promise<void> => {
       try {
         setLoading(true);
-        const res = await axios.get(`http://localhost:3001/api/sensors/status/${userId}`);
-        const data: Sensor[] = res.data;
+        const res = await axios.get<Sensor[]>(`http://localhost:3001/api/sensors/status/${userId}`);
+        const data = res.data;
 
-        // Hitung statistik berdasarkan status
-        const up = data.filter(s => s.status === 0).length;
-        const warning = data.filter(s => s.status === 1).length;
-        const down = data.filter(s => s.status === 2).length;
+        // Hitung statistik
+        const up = data.filter((s) => s.status === 0).length;
+        const warning = data.filter((s) => s.status === 1).length;
+        const down = data.filter((s) => s.status === 2).length;
 
         setSensors(data);
         setStats({ up, warning, down });
@@ -65,48 +84,54 @@ export default function SensorPage() {
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    // Ambil user dari localStorage
-    const storedUser  = localStorage.getItem('user');
-    if (storedUser ) {
-      const user = JSON.parse(storedUser );
-      if (user?.id) {
-        fetchSensors(user.id);
-      } else {
-        setError('User  ID tidak ditemukan, silakan login ulang');
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user?.id) {
+          void fetchSensors(user.id);
+        } else {
+          setError('User ID tidak ditemukan, silakan login ulang');
+          setLoading(false);
+        }
+      } catch {
+        setError('Data user di localStorage tidak valid');
         setLoading(false);
       }
     } else {
-      setError('User  belum login');
+      setError('User belum login');
       setLoading(false);
     }
   }, []);
 
-  // Fetch data log sensor untuk grafik saat sensor dipilih
-  async function fetchSensorLogs(sensorId: string, sensorName: string) {
+  // =====================
+  // FETCH SENSOR LOGS
+  // =====================
+  const fetchSensorLogs = async (sensorId: string, sensorName: string): Promise<void> => {
     try {
-      const res = await axios.get(`http://localhost:3001/api/sensors/${sensorId}/logs`);
-      // Asumsikan response array { createdAt, value }
-      const logs: SensorLog[] = res.data.map((log: any) => ({
-        createdAt: log.createdAt,
-        value: log.value,
-      }));
-      setSelectedSensorLogs(logs);
+      const res = await axios.get<SensorLog[]>(`http://localhost:3001/api/sensors/${sensorId}/logs`);
+      setSelectedSensorLogs(res.data);
       setSelectedSensorName(sensorName);
     } catch (err) {
       console.error('Gagal fetch log sensor:', err);
       setSelectedSensorLogs([]);
       setSelectedSensorName(null);
     }
-  }
+  };
 
-  // Format tanggal untuk grafik
-  const formatDate = (dateStr: string) => {
+  // =====================
+  // FORMAT TANGGAL
+  // =====================
+  const formatDate = (dateStr: string): string => {
     const d = new Date(dateStr);
     return `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
   };
 
+  // =====================
+  // RENDER LOADING
+  // =====================
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f172a] text-white">
@@ -115,6 +140,9 @@ export default function SensorPage() {
     );
   }
 
+  // =====================
+  // MAIN UI
+  // =====================
   return (
     <div className="min-h-screen bg-[#0f172a] text-white font-sans p-6">
       <main className="space-y-6">
@@ -162,8 +190,8 @@ export default function SensorPage() {
                     </td>
                   </tr>
                 )}
-                {sensors.map(sensor => {
-                  const statusInfo = statusMap[sensor.status] || { label: 'Unknown', color: 'bg-gray-500' };
+                {sensors.map((sensor) => {
+                  const statusInfo = statusMap[sensor.status];
                   return (
                     <tr
                       key={sensor.id}
@@ -172,7 +200,7 @@ export default function SensorPage() {
                       <td className="py-3 px-4">{sensor.deviceName}</td>
                       <td className="py-3 px-4">{sensor.name}</td>
                       <td className="py-3 px-4">{sensor.lastValue ?? '-'}</td>
-                      <td className={`py-3 px-4 flex items-center`}>
+                      <td className="py-3 px-4 flex items-center">
                         <span
                           className={`h-3 w-3 rounded-full ${statusInfo.color} mr-2`}
                         ></span>
@@ -185,7 +213,7 @@ export default function SensorPage() {
                       </td>
                       <td className="py-3 px-4">
                         <button
-                          onClick={() => fetchSensorLogs(sensor.id, sensor.name)}
+                          onClick={() => void fetchSensorLogs(sensor.id, sensor.name)}
                           className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
                         >
                           Lihat Grafik
@@ -202,7 +230,9 @@ export default function SensorPage() {
         {/* Grafik Sensor */}
         {selectedSensorName && selectedSensorLogs.length > 0 && (
           <div className="bg-[#1e293b] rounded-xl p-6 shadow-lg mt-6">
-            <h3 className="text-xl font-semibold mb-4">Grafik Sensor: {selectedSensorName}</h3>
+            <h3 className="text-xl font-semibold mb-4">
+              Grafik Sensor: {selectedSensorName}
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={selectedSensorLogs}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#444" />

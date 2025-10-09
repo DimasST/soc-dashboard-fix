@@ -6,18 +6,35 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { signOut } from "next-auth/react";
 
-// Custom hook untuk ambil user dari localStorage
-function useUser () {
-  const [user, setUser ] = useState(null);
+/* 🧩 Definisikan tipe data User agar tidak any */
+type User = {
+  id?: string;
+  username?: string;
+  email?: string;
+  role?: "superadmin" | "admin" | "user" | string;
+};
+
+/* 🧠 Custom hook untuk ambil user dari localStorage */
+function useUser(): User | null {
+  const [user, setUser] = useState<User | null>(null);
+
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) setUser (JSON.parse(stored));
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        setUser(JSON.parse(stored) as User);
+      }
+    } catch (err) {
+      console.error("Failed to parse user from localStorage:", err);
+      setUser(null);
+    }
   }, []);
+
   return user;
 }
 
 export default function HamburgerMenu() {
-  const user = useUser ();
+  const user = useUser();
   const role = user?.role ?? null;
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -31,10 +48,10 @@ export default function HamburgerMenu() {
     { href: "/account", label: "Account" },
   ];
 
-  const userManagement = { href: "/user-management", label: "User  Managements" };
+  const ticket = { href: "/ticket", label: "Ticket" };
+  const userManagement = { href: "/user-management", label: "User Managements" };
   const deviceManagement = { href: "/device-management", label: "Device Managements" };
   const sensorManagement = { href: "/sensor-management", label: "Sensor Managements" };
-  const ticket = { href: "/ticket", label: "Ticket" };
 
   let menuItems = [...baseMenu];
 
@@ -114,7 +131,7 @@ export default function HamburgerMenu() {
         <div className="p-6 border-t border-white/10 flex justify-between items-center">
           {user && (
             <div className="text-sm opacity-90">
-              <div>{user.username ?? user.email}</div>
+              <div>{user.username ?? user.email ?? "Unknown User"}</div>
               <div className="capitalize">Role: {role ?? "-"}</div>
             </div>
           )}
@@ -132,7 +149,7 @@ export default function HamburgerMenu() {
                   body: JSON.stringify({ userId, username }),
                 });
 
-                localStorage.removeItem("user"); // hapus user dari localStorage
+                localStorage.removeItem("user");
                 await signOut({ callbackUrl: "/login" });
               } catch (error) {
                 console.error("Logout error:", error);

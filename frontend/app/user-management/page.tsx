@@ -1,9 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FiSearch, FiTrash2, FiRefreshCw, FiUsers, FiList, FiFileText } from "react-icons/fi";
+import {
+  FiSearch,
+  FiTrash2,
+  FiRefreshCw,
+  FiUsers,
+  FiList,
+  FiFileText,
+} from "react-icons/fi";
 import CreateInviteModal from "./components/CreateInviteModal";
 
+/* ===========================
+   TYPE DEFINITIONS
+=========================== */
 type User = {
   id: string;
   email: string | null;
@@ -37,7 +47,9 @@ type UserProfile = {
   userId?: string | null;
 };
 
-
+/* ===========================
+   MAIN COMPONENT
+=========================== */
 export default function UserManagementPage() {
   const [view, setView] = useState<"users" | "logs" | "profiles">("users");
   const [users, setUsers] = useState<User[]>([]);
@@ -54,62 +66,77 @@ export default function UserManagementPage() {
 
   const API_BASE = "http://localhost:3001";
 
+  /* ===========================
+     FETCH FUNCTIONS
+  =========================== */
   const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
-    setErrorUsers(null);
     try {
+      setLoadingUsers(true);
+      setErrorUsers(null);
       const res = await fetch(`${API_BASE}/api/user`);
       if (!res.ok) throw new Error(`Failed to fetch users (${res.status})`);
-      const data = await res.json();
+      const data: User[] = await res.json();
       setUsers(data);
-    } catch (err: any) {
-      setErrorUsers(err.message || "Failed to fetch users");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch users";
+      setErrorUsers(message);
     } finally {
       setLoadingUsers(false);
     }
-  }, []);
+  }, [API_BASE]);
 
   const fetchLogs = useCallback(async () => {
-    setLoadingLogs(true);
-    setErrorLogs(null);
     try {
+      setLoadingLogs(true);
+      setErrorLogs(null);
       const res = await fetch(`${API_BASE}/api/user-logs`);
       if (!res.ok) throw new Error(`Failed to fetch logs (${res.status})`);
       const data: UserLog[] = await res.json();
       setLogs(data);
-    } catch (err: any) {
-      setErrorLogs(err.message || "Failed to fetch logs");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch logs";
+      setErrorLogs(message);
     } finally {
       setLoadingLogs(false);
     }
-  }, []);
+  }, [API_BASE]);
 
   const fetchProfiles = useCallback(async () => {
-    setLoadingProfiles(true);
-    setErrorProfiles(null);
     try {
+      setLoadingProfiles(true);
+      setErrorProfiles(null);
       const res = await fetch(`${API_BASE}/api/subscription-profiles`);
       if (!res.ok) throw new Error(`Failed to fetch profiles (${res.status})`);
       const data: UserProfile[] = await res.json();
       setProfiles(data);
-    } catch (err: any) {
-      setErrorProfiles(err.message || "Failed to fetch profiles");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch profiles";
+      setErrorProfiles(message);
     } finally {
       setLoadingProfiles(false);
     }
-  }, []);
+  }, [API_BASE]);
 
+  /* ===========================
+     AUTO REFRESH LOGS
+  =========================== */
   useEffect(() => {
     fetchUsers();
     fetchLogs();
     fetchProfiles();
-    let iv: NodeJS.Timeout | null = null;
+
+    let iv: ReturnType<typeof setInterval> | null = null;
     if (view === "logs") {
       iv = setInterval(fetchLogs, 10_000);
     }
-    return () => iv && clearInterval(iv);
+    return () => {
+      if (iv) clearInterval(iv);
+    };
   }, [fetchUsers, fetchLogs, fetchProfiles, view]);
 
+  /* ===========================
+     DELETE USER
+  =========================== */
   const handleDeleteUser = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
@@ -118,38 +145,41 @@ export default function UserManagementPage() {
         alert("User deleted successfully");
         fetchUsers();
       } else {
-        const err = await res.json();
-        alert("Failed to delete user: " + (err?.error || "unknown"));
+        const errData = await res.json();
+        alert("Failed to delete user: " + (errData?.error || "unknown"));
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       alert("Error deleting user");
     }
   };
 
-  const filteredUsers = users.filter((user) => {
-    const q = search.toLowerCase();
-    return (
-      (user.name?.toLowerCase().includes(q) ?? false) ||
-      (user.email?.toLowerCase().includes(q) ?? false) ||
-      (user.username?.toLowerCase().includes(q) ?? false)
-    );
-  });
+  /* ===========================
+     SEARCH FILTER
+  =========================== */
+  const q = search.toLowerCase();
+  const filteredUsers = users.filter(
+    (u) =>
+      (u.name?.toLowerCase().includes(q) ?? false) ||
+      (u.email?.toLowerCase().includes(q) ?? false) ||
+      (u.username?.toLowerCase().includes(q) ?? false)
+  );
+  const filteredLogs = logs.filter(
+    (l) =>
+      (l.username?.toLowerCase().includes(q) ?? false) ||
+      l.action.toLowerCase().includes(q)
+  );
+  const filteredProfiles = profiles.filter(
+    (p) =>
+      p.companyName.toLowerCase().includes(q) ||
+      p.fullName.toLowerCase().includes(q) ||
+      p.city.toLowerCase().includes(q) ||
+      p.country.toLowerCase().includes(q)
+  );
 
-  const filteredLogs = logs.filter((log) => {
-    const q = search.toLowerCase();
-    return (log.username?.toLowerCase().includes(q) ?? false) || log.action.toLowerCase().includes(q);
-  });
-
-  const filteredProfiles = profiles.filter((profile) => {
-    const q = search.toLowerCase();
-    return (
-      profile.companyName.toLowerCase().includes(q) ||
-      profile.fullName.toLowerCase().includes(q) ||
-      profile.city.toLowerCase().includes(q) ||
-      profile.country.toLowerCase().includes(q)
-    );
-  });
-
+  /* ===========================
+     RENDER
+  =========================== */
   return (
     <div className="min-h-screen bg-[#0D1B2A] text-white flex">
       {/* Sidebar */}
@@ -157,46 +187,48 @@ export default function UserManagementPage() {
         <h2 className="text-lg font-semibold mb-4">Management</h2>
 
         <button
-  className={`flex items-center gap-2 px-3 py-2 rounded font-medium text-sm ${
-    view === "users" ? "bg-[#1E4DB7]" : "hover:bg-[#1E3C72]"
-  }`}
-  onClick={() => setView("users")}
-  aria-label="User Management"
->
-  <FiUsers size={18} />
-  User Management
-</button>
+          className={`flex items-center gap-2 px-3 py-2 rounded font-medium text-sm ${
+            view === "users" ? "bg-[#1E4DB7]" : "hover:bg-[#1E3C72]"
+          }`}
+          onClick={() => setView("users")}
+        >
+          <FiUsers size={18} />
+          User Management
+        </button>
 
-<button
-  className={`flex items-center gap-2 px-3 py-2 rounded font-medium text-sm ${
-    view === "logs" ? "bg-[#1E4DB7]" : "hover:bg-[#1E3C72]"
-  }`}
-  onClick={() => setView("logs")}
->
-  <FiList size={18} />
-  Log Management
-</button>
+        <button
+          className={`flex items-center gap-2 px-3 py-2 rounded font-medium text-sm ${
+            view === "logs" ? "bg-[#1E4DB7]" : "hover:bg-[#1E3C72]"
+          }`}
+          onClick={() => setView("logs")}
+        >
+          <FiList size={18} />
+          Log Management
+        </button>
 
-<button
-  className={`flex items-center gap-2 px-3 py-2 rounded font-medium text-sm ${
-    view === "profiles" ? "bg-[#1E4DB7]" : "hover:bg-[#1E3C72]"
-  }`}
-  onClick={() => setView("profiles")}
-  aria-label="Data Diri"
->
-  <FiFileText size={18} />
-  Subscription
-</button>
-
+        <button
+          className={`flex items-center gap-2 px-3 py-2 rounded font-medium text-sm ${
+            view === "profiles" ? "bg-[#1E4DB7]" : "hover:bg-[#1E3C72]"
+          }`}
+          onClick={() => setView("profiles")}
+        >
+          <FiFileText size={18} />
+          Subscription
+        </button>
       </nav>
 
-      {/* Main content */}
+      {/* Main Content */}
       <main className="flex-1 p-6 overflow-auto">
         <header className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h1 className="text-xl font-semibold">
-            {view === "users" ? "User Management" : view === "logs" ? "User Logs" : "Data Diri"}
+            {view === "users"
+              ? "User Management"
+              : view === "logs"
+              ? "User Logs"
+              : "Subscription Profiles"}
           </h1>
 
+          {/* Header Buttons */}
           {view === "users" && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -222,7 +254,7 @@ export default function UserManagementPage() {
 
           {view === "logs" && (
             <button
-              onClick={() => fetchLogs()}
+              onClick={fetchLogs}
               title="Refresh Logs"
               className="bg-[#132132] p-2 rounded"
             >
@@ -232,7 +264,7 @@ export default function UserManagementPage() {
 
           {view === "profiles" && (
             <button
-              onClick={() => fetchProfiles()}
+              onClick={fetchProfiles}
               title="Refresh Profiles"
               className="bg-[#132132] p-2 rounded"
             >
@@ -241,141 +273,180 @@ export default function UserManagementPage() {
           )}
         </header>
 
-        {/* Search bar */}
-        <div className="mb-4 max-w-md">
+        {/* Search */}
+        <div className="mb-4 max-w-md relative">
+          <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
-            placeholder={`Search ${view === "users" ? "users" : view === "logs" ? "logs" : "profiles"}...`}
-            className="w-full rounded px-3 py-2 bg-[#132132] placeholder-gray-400 text-white outline-none text-sm"
+            placeholder={`Search ${
+              view === "users" ? "users" : view === "logs" ? "logs" : "profiles"
+            }...`}
+            className="w-full rounded pl-10 pr-3 py-2 bg-[#132132] placeholder-gray-400 text-white outline-none text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        {/* Content Table */}
+        {/* Tables */}
         {view === "users" && (
-          <div className="overflow-auto rounded-lg border border-[#1C2C3A] bg-[#0C1A2A]">
-            {errorUsers ? (
-              <div className="p-4 text-red-400">Error: {errorUsers}</div>
-            ) : (
-              <table className="min-w-full text-sm">
-                <thead className="bg-[#030E1C] text-white sticky top-0">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Name</th>
-                    <th className="px-4 py-2 text-left">Email</th>
-                    <th className="px-4 py-2 text-left">Username</th>
-                    <th className="px-4 py-2 text-left">Role</th>
-                    <th className="px-4 py-2 text-left">Status</th>
-                    <th className="px-4 py-2 text-left">Created At</th>
-                    <th className="px-4 py-2 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-[#0C1A2A]">
-                  {loadingUsers ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400 italic">
-                        Loading users...
-                      </td>
-                    </tr>
-                  ) : filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400 italic">
-                        No users found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="border-t border-[#1C2C3A] hover:bg-[#334155]"
-                      >
-                        <td className="px-4 py-2">{user.name || "-"}</td>
-                        <td className="px-4 py-2">{user.email || "-"}</td>
-                        <td className="px-4 py-2">{user.username || "-"}</td>
-                        <td className="px-4 py-2 capitalize">{user.role || "-"}</td>
-                        <td className="px-4 py-2">
-                          {user.isActivated ? "Active" : "Inactive"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {user.createdAt
-                            ? new Date(user.createdAt).toLocaleString()
-                            : "-"}
-                        </td>
-                        <td className="px-4 py-2">
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-500 hover:text-red-700 transition"
-                            title="Delete user"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
+          <UserTable
+            users={filteredUsers}
+            loading={loadingUsers}
+            error={errorUsers}
+            onDelete={handleDeleteUser}
+          />
         )}
-
         {view === "logs" && (
-          <div className="overflow-auto rounded-lg border border-[#1C2C3A] bg-[#0C1A2A]">
-            {errorLogs ? (
-              <div className="p-4 text-red-400">Error: {errorLogs}</div>
-            ) : (
-              <table className="min-w-full text-sm">
-                <thead className="bg-[#030E1C] text-white sticky top-0">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Username</th>
-                    <th className="px-4 py-2 text-left">Action</th>
-                    <th className="px-4 py-2 text-left">User Agent</th>
-                    <th className="px-4 py-2 text-left">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-[#0C1A2A]">
-                  {loadingLogs ? (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-400 italic">
-                        Loading logs...
-                      </td>
-                    </tr>
-                  ) : filteredLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-400 italic">
-                        No logs found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredLogs.map((log) => (
-                      <tr
-                        key={log.id}
-                        className="border-t border-[#1C2C3A] hover:bg-[#334155]"
-                      >
-                        <td className="px-4 py-2">{log.username || "-"}</td>
-                        <td className="px-4 py-2 capitalize">{log.action}</td>
-                        <td className="px-4 py-2 text-xs truncate">
-                          {log.userAgent || "-"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {log.createdAt
-                            ? new Date(log.createdAt).toLocaleString()
-                            : "-"}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
+          <LogTable logs={filteredLogs} loading={loadingLogs} error={errorLogs} />
+        )}
+        {view === "profiles" && (
+          <ProfileTable
+            profiles={filteredProfiles}
+            loading={loadingProfiles}
+            error={errorProfiles}
+          />
         )}
 
-{view === "profiles" && (
-  <div className="overflow-auto rounded-lg border border-[#1C2C3A] bg-[#0C1A2A]">
-    {errorProfiles ? (
-      <div className="p-4 text-red-400">Error: {errorProfiles}</div>
-    ) : (
+        <CreateInviteModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      </main>
+    </div>
+  );
+}
+
+/* ===========================
+   SUB COMPONENTS
+=========================== */
+
+function UserTable({
+  users,
+  loading,
+  error,
+  onDelete,
+}: {
+  users: User[];
+  loading: boolean;
+  error: string | null;
+  onDelete: (id: string) => void;
+}) {
+  if (error) return <div className="p-4 text-red-400">Error: {error}</div>;
+
+  return (
+    <div className="overflow-auto rounded-lg border border-[#1C2C3A] bg-[#0C1A2A]">
+      <table className="min-w-full text-sm">
+        <thead className="bg-[#030E1C] text-white sticky top-0">
+          <tr>
+            <th className="px-4 py-2 text-left">Name</th>
+            <th className="px-4 py-2 text-left">Email</th>
+            <th className="px-4 py-2 text-left">Username</th>
+            <th className="px-4 py-2 text-left">Role</th>
+            <th className="px-4 py-2 text-left">Status</th>
+            <th className="px-4 py-2 text-left">Created</th>
+            <th className="px-4 py-2 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
+            <tr>
+              <td colSpan={7} className="py-8 text-center text-gray-400 italic">
+                Loading users...
+              </td>
+            </tr>
+          ) : users.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="py-8 text-center text-gray-400 italic">
+                No users found.
+              </td>
+            </tr>
+          ) : (
+            users.map((u) => (
+              <tr key={u.id} className="border-t border-[#1C2C3A] hover:bg-[#334155]">
+                <td className="px-4 py-2">{u.name || "-"}</td>
+                <td className="px-4 py-2">{u.email || "-"}</td>
+                <td className="px-4 py-2">{u.username || "-"}</td>
+                <td className="px-4 py-2 capitalize">{u.role || "-"}</td>
+                <td className="px-4 py-2">{u.isActivated ? "Active" : "Inactive"}</td>
+                <td className="px-4 py-2">{new Date(u.createdAt).toLocaleString()}</td>
+                <td className="px-4 py-2">
+                  <button
+                    onClick={() => onDelete(u.id)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <FiTrash2 />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LogTable({
+  logs,
+  loading,
+  error,
+}: {
+  logs: UserLog[];
+  loading: boolean;
+  error: string | null;
+}) {
+  if (error) return <div className="p-4 text-red-400">Error: {error}</div>;
+  return (
+    <div className="overflow-auto rounded-lg border border-[#1C2C3A] bg-[#0C1A2A]">
+      <table className="min-w-full text-sm">
+        <thead className="bg-[#030E1C] text-white sticky top-0">
+          <tr>
+            <th className="px-4 py-2 text-left">Username</th>
+            <th className="px-4 py-2 text-left">Action</th>
+            <th className="px-4 py-2 text-left">User Agent</th>
+            <th className="px-4 py-2 text-left">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
+            <tr>
+              <td colSpan={4} className="py-8 text-center text-gray-400 italic">
+                Loading logs...
+              </td>
+            </tr>
+          ) : logs.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="py-8 text-center text-gray-400 italic">
+                No logs found.
+              </td>
+            </tr>
+          ) : (
+            logs.map((log) => (
+              <tr key={log.id} className="border-t border-[#1C2C3A] hover:bg-[#334155]">
+                <td className="px-4 py-2">{log.username || "-"}</td>
+                <td className="px-4 py-2">{log.action}</td>
+                <td className="px-4 py-2 text-xs">{log.userAgent || "-"}</td>
+                <td className="px-4 py-2">
+                  {new Date(log.createdAt).toLocaleString()}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ProfileTable({
+  profiles,
+  loading,
+  error,
+}: {
+  profiles: UserProfile[];
+  loading: boolean;
+  error: string | null;
+}) {
+  if (error) return <div className="p-4 text-red-400">Error: {error}</div>;
+  return (
+    <div className="overflow-auto rounded-lg border border-[#1C2C3A] bg-[#0C1A2A]">
       <table className="min-w-full text-sm">
         <thead className="bg-[#030E1C] text-white sticky top-0">
           <tr>
@@ -386,29 +457,25 @@ export default function UserManagementPage() {
             <th className="px-4 py-2 text-left">Price</th>
             <th className="px-4 py-2 text-left">City</th>
             <th className="px-4 py-2 text-left">Country</th>
-            <th className="px-4 py-2 text-left">User ID</th>
-            <th className="px-4 py-2 text-left">Created At</th>
+            <th className="px-4 py-2 text-left">Created</th>
           </tr>
         </thead>
-        <tbody className="bg-[#0C1A2A]">
-          {loadingProfiles ? (
+        <tbody>
+          {loading ? (
             <tr>
-              <td colSpan={9} className="py-8 text-center text-gray-400 italic">
+              <td colSpan={8} className="py-8 text-center text-gray-400 italic">
                 Loading profiles...
               </td>
             </tr>
-          ) : filteredProfiles.length === 0 ? (
+          ) : profiles.length === 0 ? (
             <tr>
-              <td colSpan={9} className="py-8 text-center text-gray-400 italic">
+              <td colSpan={8} className="py-8 text-center text-gray-400 italic">
                 No profiles found.
               </td>
             </tr>
           ) : (
-            filteredProfiles.map((p) => (
-              <tr
-                key={p.id}
-                className="border-t border-[#1C2C3A] hover:bg-[#334155]"
-              >
+            profiles.map((p) => (
+              <tr key={p.id} className="border-t border-[#1C2C3A] hover:bg-[#334155]">
                 <td className="px-4 py-2">{p.companyName}</td>
                 <td className="px-4 py-2">{p.fullName}</td>
                 <td className="px-4 py-2">{p.email || "-"}</td>
@@ -416,22 +483,14 @@ export default function UserManagementPage() {
                 <td className="px-4 py-2">Rp{p.price.toLocaleString()}</td>
                 <td className="px-4 py-2">{p.city}</td>
                 <td className="px-4 py-2">{p.country}</td>
-                <td className="px-4 py-2">{p.userId || "-"}</td>
                 <td className="px-4 py-2">
-                  {p.createdAt ? new Date(p.createdAt).toLocaleString() : "-"}
+                  {new Date(p.createdAt).toLocaleString()}
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </table>
-    )}
-  </div>
-)}
-
-
-        <CreateInviteModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      </main>
     </div>
   );
 }

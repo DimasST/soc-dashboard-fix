@@ -1,5 +1,6 @@
 'use client';
 
+import React from "react";
 import { useEffect, useState } from 'react';
 import AddDeviceForm from './components/AddDevice';
 import AddAgentForm from './components/AddAgent';

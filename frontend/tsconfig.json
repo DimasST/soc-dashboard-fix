@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -13,17 +17,26 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    // ✅ Tambahkan ini supaya TypeScript tahu namespace JSX
+    "types": [
+      "react",
+      "react-dom",
+      "node"
+    ],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
     "next-env.d.ts",
+    "global.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
@@ -32,7 +45,11 @@
     "app/dashboard/components/dashboard/page.jsx",
     "app/ticket/page.jsx",
     "app/sensor/page.jsx",
-    "app/api/auth/[...nextauth]/route.js"
-, "app/sensor-management/page.tsx", "app/device-management/page.tsx"  ],
-  "exclude": ["node_modules"]
+    "app/api/auth/[...nextauth]/route.js",
+    "app/sensor-management/page.tsx",
+    "app/device-management/page.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

@@ -8,66 +8,58 @@ datasource db {
 }
 
 model User {
-  id              String     @id @default(cuid())
-  username        String?    @unique
-  email           String     @unique
-  password        String?
-  name            String?
-  role            String     @default("user")
-  isActivated     Boolean    @default(false)
-  activationToken String?
-  activationTime  DateTime?
-  isTrial         Boolean    @default(false)
+  id                          String               @id @default(cuid())
+  username                    String?              @unique
+  email                       String               @unique
+  password                    String?
+  name                        String?
+  role                        String               @default("user")
+  isActivated                 Boolean              @default(false)
+  activationToken             String?
+  activationTime              DateTime?
+  isTrial                     Boolean              @default(false)
   subscriptionDurationMinutes Int?
-
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-
-  logs            UserLog[]
-  subscriptionProfile SubscriptionProfile?  // ⬅️ hanya satu aktif
-  devices         Device[]     
-  sensor          Sensor[]            
-
-  // NEW: relasi ke Wazuh agents (hanya tampilkan agent yg berelasi dengan user yg login)
-  wazuhAgents     WazuhAgent[]
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  devices                     Device[]
+  sensor                      Sensor[]
+  subscriptionProfile         SubscriptionProfile?
+  logs                        UserLog[]
+  wazuhAgents                 WazuhAgent[]
 }
 
 model SubscriptionProfile {
-  id           String   @id @default(cuid())
-  plan         String
-  price        Int
-  companyName  String
-  fullName     String
-  city         String
-  country      String
-  email        String?
-  createdAt    DateTime @default(now())
-
-  userId       String?   @unique
-  user         User?     @relation(fields: [userId], references: [id])
-
-  payments     Payment[]
+  id          String    @id @default(cuid())
+  plan        String
+  price       Int
+  companyName String
+  fullName    String
+  city        String
+  country     String
+  email       String?
+  createdAt   DateTime  @default(now())
+  userId      String?   @unique
+  payments    Payment[]
+  user        User?     @relation(fields: [userId], references: [id])
 }
 
 model Device {
   id        String   @id @default(cuid())
-  prtgId    String?  
+  prtgId    String?
   name      String
   type      String?
-  host      String?   
-  parentId  String?   
-  status    Int? 
+  host      String?
+  parentId  String?
+  status    Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  userId String
-  user   User @relation(fields: [userId], references: [id])
-
-  sensors Sensor[] @relation("DeviceSensors") // ⬅️ kasih nama relasi
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  sensors   Sensor[] @relation("DeviceSensors")
 }
 
 model Sensor {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   name      String
   type      String
   deviceId  String
@@ -76,21 +68,20 @@ model Sensor {
   status    String?
   lastValue Float?
   message   String?
-  createdAt DateTime @default(now())
-
-  logs      SensorLog[] @relation("SensorLogs") // ⬅️ kasih nama relasi
-  device    Device   @relation("DeviceSensors", fields: [deviceId], references: [id], onDelete: Cascade) // ⬅️ cascade
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+  timestamp DateTime?   @default(now()) @db.Timestamptz(6)
+  device    Device      @relation("DeviceSensors", fields: [deviceId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+  logs      SensorLog[] @relation("SensorLogs")
 }
 
 model SensorLog {
   id        String   @id @default(cuid())
   sensorId  String
   value     Float
-  message   String?   
+  message   String?
   createdAt DateTime @default(now())
-
-  sensor    Sensor   @relation("SensorLogs", fields: [sensorId], references: [id], onDelete: Cascade) // ⬅️ cascade
+  sensor    Sensor   @relation("SensorLogs", fields: [sensorId], references: [id], onDelete: Cascade)
 }
 
 model UserLog {
@@ -101,82 +92,74 @@ model UserLog {
   ip        String?
   userAgent String?
   createdAt DateTime @default(now())
-
   user      User?    @relation(fields: [userId], references: [id])
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  orderId   String   @unique
+  id        String               @id @default(cuid())
+  orderId   String               @unique
   package   String
   price     Int
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  status    String               @default("pending")
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
   profileId String?
   profile   SubscriptionProfile? @relation(fields: [profileId], references: [id])
 }
 
 model WazuhAgent {
-  id        String   @id @default(cuid())
-  agentId   String   @unique    // ID dari Wazuh API (unik global)
-  name      String
-  ip        String?
-  status    String   // e.g. "active", "disconnected"
-  os        String?
-  manager   String?
-  group     String?
-  version   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relasi
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  metrics   WazuhAgentMetric[]
-  alerts    WazuhAgentAlert[]
+  id              String                    @id @default(cuid())
+  agentId         String                    @unique
+  name            String
+  ip              String?
+  status          String
+  os              String?
+  manager         String?
+  group           String?
+  version         String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  userId          String
+  user            User                      @relation(fields: [userId], references: [id])
+  alerts          WazuhAgentAlert[]
+  compliance      WazuhAgentCompliance?
+  metrics         WazuhAgentMetric[]
   vulnerabilities WazuhAgentVulnerability[]
-  compliance WazuhAgentCompliance?
 }
 
 model WazuhAgentMetric {
-  id        String   @id @default(cuid())
-  cpuUsage  Float?
-  memoryUsage Float?
-  diskUsage Float?
-  collectedAt DateTime @default(now())
-
+  id           String     @id @default(cuid())
+  cpuUsage     Float?
+  memoryUsage  Float?
+  diskUsage    Float?
+  collectedAt  DateTime   @default(now())
   wazuhAgentId String
   agent        WazuhAgent @relation(fields: [wazuhAgentId], references: [id], onDelete: Cascade)
 }
 
 model WazuhAgentAlert {
-  id        String   @id @default(cuid())
-  type      String   // login_failed, malware, file_change, dll
-  severity  String   // low, medium, high, critical
-  message   String?
-  createdAt DateTime @default(now())
-
+  id           String     @id @default(cuid())
+  type         String
+  severity     String
+  message      String?
+  createdAt    DateTime   @default(now())
   wazuhAgentId String
   agent        WazuhAgent @relation(fields: [wazuhAgentId], references: [id], onDelete: Cascade)
 }
 
 model WazuhAgentVulnerability {
-  id        String   @id @default(cuid())
-  severity  String   // critical, medium, low
-  count     Int
-  createdAt DateTime @default(now())
-
+  id           String     @id @default(cuid())
+  severity     String
+  count        Int
+  createdAt    DateTime   @default(now())
   wazuhAgentId String
   agent        WazuhAgent @relation(fields: [wazuhAgentId], references: [id], onDelete: Cascade)
 }
 
 model WazuhAgentCompliance {
-  id        String   @id @default(cuid())
-  percentage Float   // e.g. 90.0
-  lastCheck  DateTime @default(now())
-
-  wazuhAgentId String @unique
+  id           String     @id @default(cuid())
+  percentage   Float
+  lastCheck    DateTime   @default(now())
+  wazuhAgentId String     @unique
   agent        WazuhAgent @relation(fields: [wazuhAgentId], references: [id], onDelete: Cascade)
 }
