@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
-export default function DashboardPage() {
+function DashboardInner() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
 
@@ -32,19 +33,13 @@ export default function DashboardPage() {
           <div>{session?.user?.name || "Tidak diketahui"}</div>
 
           <div className="text-gray-400">Role :</div>
-          <div className="italic">
-            {session?.user?.role || "Tidak diketahui"}
-          </div>
+          <div className="italic">{session?.user?.role || "Tidak diketahui"}</div>
 
           <div className="text-gray-400">Email Address :</div>
-          <div className="italic">
-            {session?.user?.email || "Tidak diketahui"}
-          </div>
+          <div className="italic">{session?.user?.email || "Tidak diketahui"}</div>
 
           <div className="text-gray-400">Plan Account :</div>
-          <div className="italic">
-            {plan}
-          </div>
+          <div className="italic">{plan}</div>
         </div>
       </div>
 
@@ -59,5 +54,21 @@ export default function DashboardPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+// ✅ Bungkus pakai Suspense agar aman untuk build
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#0f172a] text-white">
+          <div className="animate-spin h-10 w-10 rounded-full border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-300 text-sm">Memuat akun...</p>
+        </div>
+      }
+    >
+      <DashboardInner />
+    </Suspense>
   );
 }

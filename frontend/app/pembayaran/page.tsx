@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 
 type Step = 1 | 2 | 3;
 
-export default function PembayaranBaru() {
+function PembayaranBaru() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -265,8 +265,7 @@ export default function PembayaranBaru() {
             )}
             <p className="mt-3 text-sm text-gray-400">Order ID: {orderId}</p>
             <p className="mt-2 text-xs text-gray-400">
-              Sistem akan otomatis mendeteksi pembayaran dan lanjut ke langkah
-              berikutnya.
+              Sistem akan otomatis mendeteksi pembayaran dan lanjut ke langkah berikutnya.
             </p>
           </div>
         )}
@@ -313,5 +312,21 @@ export default function PembayaranBaru() {
         )}
       </div>
     </section>
+  );
+}
+
+// ✅ Bungkus dalam Suspense agar build tidak error
+export default function PembayaranPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#0D1B2A] text-white">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-300 text-sm">Memuat halaman pembayaran...</p>
+        </div>
+      }
+    >
+      <PembayaranBaru />
+    </Suspense>
   );
 }
