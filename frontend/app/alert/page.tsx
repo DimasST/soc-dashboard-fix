@@ -33,7 +33,7 @@ export default function AlertPage() {
   const [sensorAlerts, setSensorAlerts] = useState<Sensor[]>([]);
   const [multiLoginAlerts, setMultiLoginAlerts] = useState<MultiLoginAlert[]>([]);
 
-  // Fetch sensor alerts
+  // === Fetch sensor alerts ===
   useEffect(() => {
     async function fetchSensorAlerts() {
       try {
@@ -57,7 +57,7 @@ export default function AlertPage() {
     return () => clearInterval(iv);
   }, []);
 
-  // Fetch multi-login alerts
+  // === Fetch multi-login alerts ===
   useEffect(() => {
     async function fetchMultiLoginAlerts() {
       try {
@@ -101,7 +101,7 @@ export default function AlertPage() {
     return () => clearInterval(iv);
   }, []);
 
-  // Content untuk sensor
+  // === Render sensor alerts ===
   const renderSensorAlerts = () => {
     if (sensorAlerts.length === 0) {
       return (
@@ -148,7 +148,7 @@ export default function AlertPage() {
     );
   };
 
-  // Content untuk multi-login
+  // === Render multi-login alerts ===
   const renderMultiLoginAlerts = () => {
     if (multiLoginAlerts.length === 0) {
       return (
@@ -169,7 +169,9 @@ export default function AlertPage() {
             className="bg-[#334155] rounded-lg p-5 border-l-4 border-red-500 shadow hover:shadow-xl transition duration-200"
           >
             <div className="flex items-center justify-between">
-              <p className="text-lg font-semibold text-red-400">{alert.username}</p>
+              <p className="text-lg font-semibold text-red-400">
+                {alert.username}
+              </p>
               <span className="px-3 py-1 text-xs font-medium rounded-full bg-red-600 text-white">
                 Multi Login
               </span>
@@ -177,9 +179,9 @@ export default function AlertPage() {
 
             <p className="text-sm text-gray-300 mt-1">
               Devices/Browser:
-              {alert.userAgents.map((ua) => (
+              {alert.userAgents.map((ua, i) => (
                 <span
-                  key={ua}
+                  key={`${alert.username}-${i}`}
                   className="ml-1 inline-block px-2 py-1 rounded bg-[#1E4DB7] text-white text-xs"
                 >
                   {ua}
